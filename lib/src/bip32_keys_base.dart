@@ -50,117 +50,6 @@ class Bip32Keys {
     return neutered;
   }
 
-  /// Serializes the key to Base58
-  String toBase58() {
-    final version = !isNeutered ? network.bip32.private : network.bip32.public;
-    final buffer = Uint8List(78);
-    final bytes = buffer.buffer.asByteData();
-    bytes.setUint32(0, version);
-    bytes.setUint8(4, depth);
-    bytes.setUint32(5, parentFingerprint);
-    bytes.setUint32(9, index);
-    buffer.setRange(13, 45, chainCode);
-    if (!isNeutered) {
-      bytes.setUint8(45, 0);
-      buffer.setRange(46, 78, private!);
-    } else {
-      buffer.setRange(45, 78, public);
-    }
-    return bs58check.encode(buffer);
-  }
-
-  /// Serializes the private key to WIF
-  String toWIF() {
-    if (private == null) throw ArgumentError("Missing private key");
-    return wif.encode(
-      wif.WIF(
-        version: network.wif,
-        privateKey: private!,
-        compressed: true,
-      ),
-    );
-  }
-
-  /// Derives a child key at the given index
-  Bip32Keys derive(int index) {
-    if (index > Constants.uint32Max || index < 0) {
-      throw ArgumentError(Constants.errorExpectedUInt32);
-    }
-    final isHardened = index >= Constants.highestBit;
-    final data = Uint8List(37);
-    if (isHardened) {
-      if (isNeutered) {
-        throw ArgumentError("Missing private key for hardened child key");
-      }
-      data[0] = 0x00;
-      data.setRange(1, 33, private!);
-      data.buffer.asByteData().setUint32(33, index);
-    } else {
-      data.setRange(0, 33, public);
-      data.buffer.asByteData().setUint32(33, index);
-    }
-    final i = hmacSHA512(chainCode, data);
-    final il = i.sublist(0, 32);
-    final ir = i.sublist(32);
-    if (!ecc.isPrivate(il)) {
-      return derive(index + 1);
-    }
-    late Bip32Keys hd;
-    if (!isNeutered) {
-      final ki = ecc.privateAdd(private!, il);
-      if (ki == null) return derive(index + 1);
-      hd = Bip32Keys.fromPrivateKey(ki, ir, network: network);
-    } else {
-      final ki = ecc.pointAddScalar(public, il, true);
-      if (ki == null) return derive(index + 1);
-      hd = Bip32Keys.fromPublicKey(ki, ir, network: network);
-    }
-    hd.depth = depth + 1;
-    hd.index = index;
-    hd.parentFingerprint = fingerprint.buffer.asByteData().getUint32(0);
-    return hd;
-  }
-
-  /// Derives a hardened child key at the given index
-  Bip32Keys deriveHardened(int index) {
-    if (index > Constants.uint31Max || index < 0) {
-      throw ArgumentError(Constants.errorExpectedUInt31);
-    }
-    return derive(index + Constants.highestBit);
-  }
-
-  /// Derives a key from a BIP32 path string
-  Bip32Keys derivePath(String path) {
-    if (!Constants.bip32PathRegex.hasMatch(path)) {
-      throw ArgumentError(Constants.errorExpectedBip32Path);
-    }
-    List<String> splitPath = path.split("/");
-    if (splitPath[0] == Constants.masterPrefix) {
-      if (parentFingerprint != Constants.defaultParentFingerprint) {
-        throw ArgumentError(Constants.errorExpectedMasterGotChild);
-      }
-      splitPath = splitPath.sublist(1);
-    }
-    return splitPath.fold(this, (Bip32Keys prevHd, String indexStr) {
-      int index;
-      if (indexStr.substring(indexStr.length - 1) == "'") {
-        index = int.parse(indexStr.substring(0, indexStr.length - 1));
-        return prevHd.deriveHardened(index);
-      } else {
-        index = int.parse(indexStr);
-        return prevHd.derive(index);
-      }
-    });
-  }
-
-  /// Signs a hash with the private key
-  sign(Uint8List hash) => ecc.sign(hash, private!);
-
-  /// Verifies a signature with the public key
-  verify(Uint8List hash, Uint8List signature) {
-    return ecc.verify(hash, public, signature);
-  }
-
   /// Constructs a BIP32 key from a Base58 string
   factory Bip32Keys.fromBase58(String string,
       {NetworkType? network, bool bypassVersion = false}) {
@@ -243,5 +132,116 @@ class Bip32Keys {
     final il = i.sublist(0, Constants.keyLength);
     final ir = i.sublist(Constants.keyLength);
     return Bip32Keys.fromPrivateKey(il, ir, network: network);
+  }
+
+  /// Derives a child key at the given index
+  Bip32Keys derive(int index) {
+    if (index > Constants.uint32Max || index < 0) {
+      throw ArgumentError(Constants.errorExpectedUInt32);
+    }
+    final isHardened = index >= Constants.highestBit;
+    final data = Uint8List(37);
+    if (isHardened) {
+      if (isNeutered) {
+        throw ArgumentError("Missing private key for hardened child key");
+      }
+      data[0] = 0x00;
+      data.setRange(1, 33, private!);
+      data.buffer.asByteData().setUint32(33, index);
+    } else {
+      data.setRange(0, 33, public);
+      data.buffer.asByteData().setUint32(33, index);
+    }
+    final i = hmacSHA512(chainCode, data);
+    final il = i.sublist(0, 32);
+    final ir = i.sublist(32);
+    if (!ecc.isPrivate(il)) {
+      return derive(index + 1);
+    }
+    late Bip32Keys hd;
+    if (!isNeutered) {
+      final ki = ecc.privateAdd(private!, il);
+      if (ki == null) return derive(index + 1);
+      hd = Bip32Keys.fromPrivateKey(ki, ir, network: network);
+    } else {
+      final ki = ecc.pointAddScalar(public, il, true);
+      if (ki == null) return derive(index + 1);
+      hd = Bip32Keys.fromPublicKey(ki, ir, network: network);
+    }
+    hd.depth = depth + 1;
+    hd.index = index;
+    hd.parentFingerprint = fingerprint.buffer.asByteData().getUint32(0);
+    return hd;
+  }
+
+  /// Derives a hardened child key at the given index
+  Bip32Keys deriveHardened(int index) {
+    if (index > Constants.uint31Max || index < 0) {
+      throw ArgumentError(Constants.errorExpectedUInt31);
+    }
+    return derive(index + Constants.highestBit);
+  }
+
+  /// Derives a key from a BIP32 path string
+  Bip32Keys derivePath(String path) {
+    if (!Constants.bip32PathRegex.hasMatch(path)) {
+      throw ArgumentError(Constants.errorExpectedBip32Path);
+    }
+    List<String> splitPath = path.split("/");
+    if (splitPath[0] == Constants.masterPrefix) {
+      if (parentFingerprint != Constants.defaultParentFingerprint) {
+        throw ArgumentError(Constants.errorExpectedMasterGotChild);
+      }
+      splitPath = splitPath.sublist(1);
+    }
+    return splitPath.fold(this, (Bip32Keys prevHd, String indexStr) {
+      int index;
+      if (indexStr.substring(indexStr.length - 1) == "'") {
+        index = int.parse(indexStr.substring(0, indexStr.length - 1));
+        return prevHd.deriveHardened(index);
+      } else {
+        index = int.parse(indexStr);
+        return prevHd.derive(index);
+      }
+    });
+  }
+
+  /// Signs a hash with the private key
+  sign(Uint8List hash) => ecc.sign(hash, private!);
+
+  /// Verifies a signature with the public key
+  verify(Uint8List hash, Uint8List signature) {
+    return ecc.verify(hash, public, signature);
+  }
+
+  /// Serializes the key to Base58
+  String toBase58() {
+    final version = !isNeutered ? network.bip32.private : network.bip32.public;
+    final buffer = Uint8List(78);
+    final bytes = buffer.buffer.asByteData();
+    bytes.setUint32(0, version);
+    bytes.setUint8(4, depth);
+    bytes.setUint32(5, parentFingerprint);
+    bytes.setUint32(9, index);
+    buffer.setRange(13, 45, chainCode);
+    if (!isNeutered) {
+      bytes.setUint8(45, 0);
+      buffer.setRange(46, 78, private!);
+    } else {
+      buffer.setRange(45, 78, public);
+    }
+    return bs58check.encode(buffer);
+  }
+
+  /// Serializes the private key to WIF
+  String toWIF() {
+    if (private == null) throw ArgumentError("Missing private key");
+    return wif.encode(
+      wif.WIF(
+        version: network.wif,
+        privateKey: private!,
+        compressed: true,
+      ),
+    );
   }
 }
