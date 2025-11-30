@@ -5,8 +5,8 @@ import 'package:test/test.dart';
 import 'dart:io';
 import 'dart:convert';
 
-final litecoin = NetworkType(
-    bip32: Bip32Type(private: 0x019d9cfe, public: 0x019da462), wif: 0xb0);
+final litecoin = Bip32Network(
+    version: Bip32Version(private: 0x019d9cfe, public: 0x019da462), wif: 0xb0);
 List<dynamic> validAll = [];
 
 void main() {
@@ -24,7 +24,7 @@ void main() {
     for (var ff in validAll) {
       group(ff['comment'] ?? ff['base58Priv'], () {
         setUp(() {});
-        NetworkType? network = ff['network'] == 'litecoin' ? litecoin : null;
+        Bip32Network? network = ff['network'] == 'litecoin' ? litecoin : null;
         var hdPrv = Bip32Keys.fromBase58(ff['base58Priv'], network: network);
         test('works for private key -> HD wallet', () {
           verify(hdPrv, true, ff, network);
@@ -49,7 +49,7 @@ void main() {
 
   test('fromBase58 throws', () {
     for (var f in (fixtures['invalid']['fromBase58'] as List<dynamic>)) {
-      NetworkType? network =
+      Bip32Network? network =
           f['network'] != null && f['network'] == 'litecoin' ? litecoin : null;
       Bip32Keys? hd;
       try {

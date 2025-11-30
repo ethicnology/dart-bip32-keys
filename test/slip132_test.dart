@@ -1,7 +1,29 @@
+import 'dart:typed_data';
+import 'package:bip39_mnemonic/bip39_mnemonic.dart';
 import 'package:test/test.dart';
 import 'package:bip32_keys/bip32_keys.dart';
 
 class TestValues {
+  final mnemonic = Mnemonic.fromSentence(
+    "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+    Language.english,
+  );
+
+  static get derivedBip44Xprv =>
+      'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb';
+  static get derivedBip44Xpub =>
+      'xpub6BosfCnifzxcFwrSzQiqu2DBVTshkCXacvNsWGYJVVhhawA7d4R5WSWGFNbi8Aw6ZRc1brxMyWMzG3DSSSSoekkudhUd9yLb6qx39T9nMdj';
+
+  static get derivedBip49Yprv =>
+      'yprvAHwhK6RbpuS3dgCYHM5jc2ZvEKd7Bi61u9FVhYMpgMSuZS613T1xxQeKTffhrHY79hZ5PsskBjcc6C2V7DrnsMsNaGDaWev3GLRQRgV7hxF';
+  static get derivedBip49Ypub =>
+      'ypub6Ww3ibxVfGzLrAH1PNcjyAWenMTbbAosGNB6VvmSEgytSER9azLDWCxoJwW7Ke7icmizBMXrzBx9979FfaHxHcrArf3zbeJJJUZPf663zsP';
+
+  static get derivedBip84Zprv =>
+      'zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE';
+  static get derivedBip84Zpub =>
+      'zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs';
+
   // XPUB
   static get xpub =>
       'xpub6DJwRncrB8eNrzUq8XxgjwCZsEeWP8FeqBJbJQZ8JfuDwLdAzyjhHiHJieNuar1wjQTyihhMWtaKGE4DUd8uBgtyrNJqF5drwbNVUqb83b7';
@@ -37,92 +59,127 @@ void main() {
   group('SLIP-132 Tests', () {
     group('parse and tryParse functions', () {
       test('parse xpub format', () {
-        final result = Slip132Format.parse(TestValues.xpub);
-        expect(result, Slip132Format.xpub);
+        final result = Slip132.parsePublicKey(TestValues.xpub);
+        expect(result, Slip132.mainnetBip44SingleSig);
       });
 
       test('parse ypub format', () {
-        final result = Slip132Format.parse(TestValues.ypub);
-        expect(result, Slip132Format.ypub);
+        final result = Slip132.parsePublicKey(TestValues.ypub);
+        expect(result, Slip132.mainnetBip49SingleSig);
       });
 
       test('parse zpub format', () {
-        final result = Slip132Format.parse(TestValues.zpub);
-        expect(result, Slip132Format.zpub);
+        final result = Slip132.parsePublicKey(TestValues.zpub);
+        expect(result, Slip132.mainnetBip84SingleSig);
       });
 
       test('parse tpub format', () {
-        final result = Slip132Format.parse(TestValues.xpubToTpub);
-        expect(result, Slip132Format.tpub);
+        final result = Slip132.parsePublicKey(TestValues.xpubToTpub);
+        expect(result, Slip132.testnetBip44SingleSig);
       });
 
       test('parse upub format', () {
-        final result = Slip132Format.parse(TestValues.xpubToUpub);
-        expect(result, Slip132Format.upub);
+        final result = Slip132.parsePublicKey(TestValues.xpubToUpub);
+        expect(result, Slip132.testnetBip49SingleSig);
       });
 
       test('parse vpub format', () {
-        final result = Slip132Format.parse(TestValues.xpubToVpub);
-        expect(result, Slip132Format.vpub);
+        final result = Slip132.parsePublicKey(TestValues.xpubToVpub);
+        expect(result, Slip132.testnetBip84SingleSig);
       });
 
       test('parse throws FormatException for invalid format', () {
-        expect(() => Slip132Format.parse('invalid'), throwsA(anything));
+        expect(() => Slip132.parsePublicKey('invalid'), throwsA(anything));
       });
 
       test('parse throws FormatException for short input', () {
-        expect(() => Slip132Format.parse('abc'), throwsA(anything));
+        expect(() => Slip132.parsePublicKey('abc'), throwsA(anything));
       });
     });
 
     test('xpub fingerprint', () {
-      final result = getFingerprint(TestValues.xpub, Slip132Format.xpub);
+      final result =
+          getFingerprint(TestValues.xpub, Slip132.mainnetBip44SingleSig);
       expect(result, TestValues.xpubFingerprint);
     });
 
     test('ypub to xpub conversion', () {
-      final result = changeVersionBytes(TestValues.ypub, Slip132Format.xpub);
+      final result = changeVersionBytes(TestValues.ypub,
+          Slip132.mainnetBip44SingleSig.network.version.public);
       expect(result, TestValues.ypubToXpub);
     });
 
     test('ypub fingerprint', () {
-      final result = getFingerprint(TestValues.ypub, Slip132Format.ypub);
+      final result =
+          getFingerprint(TestValues.ypub, Slip132.mainnetBip49SingleSig);
       expect(result, TestValues.ypubFingerprint);
     });
 
     test('zpub to xpub conversion', () {
-      final result = changeVersionBytes(TestValues.zpub, Slip132Format.xpub);
+      final result = changeVersionBytes(TestValues.zpub,
+          Slip132.mainnetBip44SingleSig.network.version.public);
       expect(result, TestValues.zpubToXpub);
     });
 
     test('zpub fingerprint', () {
-      final result = getFingerprint(TestValues.zpub, Slip132Format.zpub);
+      final result =
+          getFingerprint(TestValues.zpub, Slip132.mainnetBip84SingleSig);
       expect(result, TestValues.zpubFingerprint);
     });
 
     test('xpub to ypub conversion', () {
-      final result = changeVersionBytes(TestValues.xpub, Slip132Format.ypub);
+      final result = changeVersionBytes(TestValues.xpub,
+          Slip132.mainnetBip49SingleSig.network.version.public);
       expect(result, TestValues.xpubToYpub);
     });
 
     test('xpub to zpub conversion', () {
-      final result = changeVersionBytes(TestValues.xpub, Slip132Format.zpub);
+      final result = changeVersionBytes(TestValues.xpub,
+          Slip132.mainnetBip84SingleSig.network.version.public);
       expect(result, TestValues.xpubToZpub);
     });
 
     test('xpub to tpub conversion', () {
-      final result = changeVersionBytes(TestValues.xpub, Slip132Format.tpub);
+      final result = changeVersionBytes(TestValues.xpub,
+          Slip132.testnetBip44SingleSig.network.version.public);
       expect(result, TestValues.xpubToTpub);
     });
 
     test('xpub to upub conversion', () {
-      final result = changeVersionBytes(TestValues.xpub, Slip132Format.upub);
+      final result = changeVersionBytes(TestValues.xpub,
+          Slip132.testnetBip49SingleSig.network.version.public);
       expect(result, TestValues.xpubToUpub);
     });
 
     test('xpub to vpub conversion', () {
-      final result = changeVersionBytes(TestValues.xpub, Slip132Format.vpub);
+      final result = changeVersionBytes(TestValues.xpub,
+          Slip132.testnetBip84SingleSig.network.version.public);
       expect(result, TestValues.xpubToVpub);
+    });
+
+    test('derive keys from seed', () {
+      final seed = Uint8List.fromList(TestValues().mnemonic.seed);
+      final root = Bip32Keys.fromSeed(seed);
+
+      // m/44'/0'/0'
+      final bip44Ctx = root.derivePath("m/44'/0'/0'");
+      expect(bip44Ctx.toBase58(), TestValues.derivedBip44Xprv);
+      expect(bip44Ctx.neutered.toVersion(Slip132.mainnetBip44SingleSig),
+          TestValues.derivedBip44Xpub);
+
+      // m/49'/0'/0'
+      final bip49Ctx = root.derivePath("m/49'/0'/0'");
+      expect(bip49Ctx.toVersion(Slip132.mainnetBip49SingleSig),
+          TestValues.derivedBip49Yprv);
+      expect(bip49Ctx.neutered.toVersion(Slip132.mainnetBip49SingleSig),
+          TestValues.derivedBip49Ypub);
+
+      // m/84'/0'/0'
+      final bip84Ctx = root.derivePath("m/84'/0'/0'");
+      expect(bip84Ctx.toVersion(Slip132.mainnetBip84SingleSig),
+          TestValues.derivedBip84Zprv);
+      expect(bip84Ctx.neutered.toVersion(Slip132.mainnetBip84SingleSig),
+          TestValues.derivedBip84Zpub);
     });
   });
 }

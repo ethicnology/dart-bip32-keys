@@ -3,160 +3,103 @@
 import 'package:bs58check/bs58check.dart' as bs58check;
 import 'package:hex/hex.dart';
 
-class Bip32Type {
-  int public;
-  int private;
-  Bip32Type({required this.public, required this.private});
+class Bip32Version {
+  final int public;
+  final int private;
+
+  const Bip32Version({required this.public, required this.private});
 }
 
-class NetworkType {
-  int wif;
-  Bip32Type bip32;
-  NetworkType({required this.wif, required this.bip32});
+class Bip32Network {
+  final int wif;
+  final Bip32Version version;
+
+  const Bip32Network({required this.wif, required this.version});
 }
 
-// inspired by https://github.com/jlopp/xpub-converter/blob/master/js/xpubConvert.js
-enum Slip132Format {
-  xpub(
-    version: '0488b21e',
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    bech32: 'bc',
-    bip32Public: 0x0488b21e,
-    bip32Private: 0x0488ade4,
-    pubKeyHash: 0x00,
-    scriptHash: 0x05,
-    wif: 0x80,
+enum Slip132 {
+  mainnetBip44SingleSig(
+    network: Bip32Network(
+      wif: 0x80,
+      version: Bip32Version(public: 0x0488b21e, private: 0x0488ade4),
+    ),
   ),
-  ypub(
-    version: '049d7cb2',
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    bech32: 'bc',
-    bip32Public: 0x049d7cb2,
-    bip32Private: 0x049d7878,
-    pubKeyHash: 0x00,
-    scriptHash: 0x05,
-    wif: 0x80,
+  mainnetBip49SingleSig(
+    network: Bip32Network(
+      wif: 0x80,
+      version: Bip32Version(public: 0x049d7cb2, private: 0x049d7878),
+    ),
   ),
-  Ypub(
-    version: '0295b43f',
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    bech32: 'bc',
-    bip32Public: 0x0295b43f,
-    bip32Private: 0x0295b005,
-    pubKeyHash: 0x00,
-    scriptHash: 0x05,
-    wif: 0x80,
+  mainnetBip84SingleSig(
+    network: Bip32Network(
+      wif: 0x80,
+      version: Bip32Version(public: 0x04b24746, private: 0x04b2430c),
+    ),
   ),
-  zpub(
-    version: '04b24746',
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    bech32: 'bc',
-    bip32Public: 0x04b24746,
-    bip32Private: 0x04b2430c,
-    pubKeyHash: 0x00,
-    scriptHash: 0x05,
-    wif: 0x80,
+  mainnetBip49MultiSig(
+    network: Bip32Network(
+      wif: 0x80,
+      version: Bip32Version(public: 0x0295b43f, private: 0x0295b005),
+    ),
   ),
-  Zpub(
-    version: '02aa7ed3',
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    bech32: 'bc',
-    bip32Public: 0x02aa7ed3,
-    bip32Private: 0x02aa7a99,
-    pubKeyHash: 0x00,
-    scriptHash: 0x05,
-    wif: 0x80,
+  mainnetBip84MultiSig(
+    network: Bip32Network(
+      wif: 0x80,
+      version: Bip32Version(public: 0x02aa7ed3, private: 0x02aa7a99),
+    ),
   ),
-  tpub(
-    version: '043587cf',
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    bech32: 'tb',
-    bip32Public: 0x043587cf,
-    bip32Private: 0x04358394,
-    pubKeyHash: 0x6f,
-    scriptHash: 0xc4,
-    wif: 0xef,
+  testnetBip44SingleSig(
+    network: Bip32Network(
+      wif: 0xef,
+      version: Bip32Version(public: 0x043587cf, private: 0x04358394),
+    ),
   ),
-  upub(
-    version: '044a5262',
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    bech32: 'tb',
-    bip32Public: 0x044a5262,
-    bip32Private: 0x044a4e28,
-    pubKeyHash: 0x6f,
-    scriptHash: 0xc4,
-    wif: 0xef,
+  testnetBip49SingleSig(
+    network: Bip32Network(
+      wif: 0xef,
+      version: Bip32Version(public: 0x044a5262, private: 0x044a4e28),
+    ),
   ),
-  Upub(
-    version: '024289ef',
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    bech32: 'tb',
-    bip32Public: 0x024289ef,
-    bip32Private: 0x024285b5,
-    pubKeyHash: 0x6f,
-    scriptHash: 0xc4,
-    wif: 0xef,
+  testnetBip84SingleSig(
+    network: Bip32Network(
+      wif: 0xef,
+      version: Bip32Version(public: 0x045f1cf6, private: 0x045f18bc),
+    ),
   ),
-  vpub(
-    version: '045f1cf6',
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    bech32: 'tb',
-    bip32Public: 0x045f1cf6,
-    bip32Private: 0x045f18bc,
-    pubKeyHash: 0x6f,
-    scriptHash: 0xc4,
-    wif: 0xef,
+  testnetBip49MultiSig(
+    network: Bip32Network(
+      wif: 0xef,
+      version: Bip32Version(public: 0x024289ef, private: 0x024285b5),
+    ),
   ),
-  Vpub(
-    version: '02575483',
-    messagePrefix: '\x18Bitcoin Signed Message:\n',
-    bech32: 'tb',
-    bip32Public: 0x02575483,
-    bip32Private: 0x02575048,
-    pubKeyHash: 0x6f,
-    scriptHash: 0xc4,
-    wif: 0xef,
+  testnetBip84MultiSig(
+    network: Bip32Network(
+      wif: 0xef,
+      version: Bip32Version(public: 0x02575483, private: 0x02575048),
+    ),
   );
 
-  const Slip132Format({
-    required this.version,
-    required this.messagePrefix,
-    required this.bech32,
-    required this.bip32Public,
-    required this.bip32Private,
-    required this.pubKeyHash,
-    required this.scriptHash,
-    required this.wif,
-  });
+  const Slip132({required this.network});
 
-  final String version;
-  final String messagePrefix;
-  final String bech32;
-  final int bip32Public;
-  final int bip32Private;
-  final int pubKeyHash;
-  final int scriptHash;
-  final int wif;
+  final Bip32Network network;
 
-  Bip32Type get bip32 => Bip32Type(public: bip32Public, private: bip32Private);
-  NetworkType get network => NetworkType(wif: wif, bip32: bip32);
-
-  static Slip132Format parse(String input) {
+  static Slip132 parsePublicKey(String input) {
     input = input.trim();
     final bytes = bs58check.decode(input);
-    final versionBytes = bytes.sublist(0, 4);
-    final versionHex = HEX.encode(versionBytes);
+    final version = HEX.encode(bytes.sublist(0, 4));
 
-    for (final format in Slip132Format.values) {
-      if (format.version == versionHex) return format;
+    for (final slip132 in Slip132.values) {
+      if (slip132.network.version.public == int.parse(version, radix: 16)) {
+        return slip132;
+      }
     }
 
     throw 'Invalid SLIP-132 format: $input';
   }
 
-  static Slip132Format? tryParse(String input) {
+  static Slip132? tryParse(String input) {
     try {
-      return parse(input);
+      return parsePublicKey(input);
     } catch (e) {
       return null;
     }

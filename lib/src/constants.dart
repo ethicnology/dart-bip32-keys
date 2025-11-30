@@ -3,8 +3,8 @@ import 'package:bip32_keys/bip32_keys.dart';
 /// Centralized configuration for BIP32 keys library
 class Constants {
   // Network configurations
-  static final bitcoin = Slip132Format.xpub.network;
-  static final testnet = Slip132Format.tpub.network;
+  static final bitcoin = Slip132.mainnetBip44SingleSig.network;
+  static final testnet = Slip132.testnetBip44SingleSig.network;
 
   // BIP32 constants
   static const int highestBit = 0x80000000;

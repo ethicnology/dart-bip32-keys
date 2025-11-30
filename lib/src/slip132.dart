@@ -12,12 +12,11 @@ extension Slip132Extension on Bip32Keys {
   /// [format] the target format (xpub, ypub, zpub, etc.)
   ///
   /// Returns the converted extended public key or error message
-  String toSlip132(Slip132Format format) {
-    if (isNeutered) {
-      return changeVersionBytes(toBase58(), format);
-    } else {
-      throw Constants.errorCannotConvertPrivateKey;
-    }
+  String toVersion(Slip132 slip132) {
+    return switch (isNeutered) {
+      true => changeVersionBytes(toBase58(), slip132.network.version.public),
+      false => changeVersionBytes(toBase58(), slip132.network.version.private),
+    };
   }
 
   /// Get the SLIP-132 fingerprint for this key
@@ -25,7 +24,7 @@ extension Slip132Extension on Bip32Keys {
   /// [format] the target format for version bytes
   ///
   /// Returns the fingerprint as hex string
-  String getSlip132Fingerprint(Slip132Format format) {
+  String getSlip132PublicFingerprint(Slip132 format) {
     if (isNeutered) {
       return getFingerprint(toBase58(), format);
     } else {
@@ -38,7 +37,7 @@ extension Slip132Extension on Bip32Keys {
   /// [format] the target format for version bytes
   ///
   /// Returns the parent fingerprint as hex string
-  String getSlip132ParentFingerprint(Slip132Format format) {
+  String getSlip132ParentFingerprint(Slip132 format) {
     if (isNeutered) {
       return getParentFingerprint(toBase58(), format);
     } else {
@@ -56,18 +55,17 @@ extension Slip132Extension on Bip32Keys {
 /// [targetFormat] the desired SLIP-132 format
 ///
 /// Returns the converted extended public key or error message
-String changeVersionBytes(String xpub, Slip132Format targetFormat) {
-  // trim whitespace
-  xpub = xpub.trim();
-
+String changeVersionBytes(String keyBase58, int version) {
   try {
-    final data = bs58check.decode(xpub);
-    final dataWithoutVersion = data
-        .sublist(Constants.versionBytesLength); // Remove original version bytes
-    final newVersionBytes = HEX.decode(targetFormat.version);
-    final combinedData = [...newVersionBytes, ...dataWithoutVersion];
-    final finalData = Uint8List.fromList(combinedData);
-    return bs58check.encode(finalData);
+    final keyBytes = bs58check.decode(keyBase58);
+    final keyBytesWithoutVersion =
+        keyBytes.sublist(Constants.versionBytesLength);
+
+    final newVersionBytes = HEX.decode(version.toRadixString(16));
+    final newKeyBytes =
+        Uint8List.fromList([...newVersionBytes, ...keyBytesWithoutVersion]);
+    final newKeyBase58 = bs58check.encode(newKeyBytes);
+    return newKeyBase58;
   } catch (err) {
     rethrow;
   }
@@ -79,13 +77,16 @@ String changeVersionBytes(String xpub, Slip132Format targetFormat) {
 /// [targetFormat] the target format for version bytes
 ///
 /// Returns the fingerprint as hex string
-String getFingerprint(String xpub, Slip132Format targetFormat) {
+String getFingerprint(String xpub, Slip132 targetFormat) {
   try {
-    final convertedXpub = changeVersionBytes(xpub, targetFormat);
-    final networkType = NetworkType(
-      wif: targetFormat.wif,
-      bip32: targetFormat.bip32,
+    final convertedXpub =
+        changeVersionBytes(xpub, targetFormat.network.version.public);
+
+    final networkType = Bip32Network(
+      wif: targetFormat.network.wif,
+      version: targetFormat.network.version,
     );
+
     final bip32Key = Bip32Keys.fromBase58(convertedXpub, network: networkType);
     return HEX.encode(bip32Key.fingerprint);
   } catch (err) {
@@ -99,14 +100,16 @@ String getFingerprint(String xpub, Slip132Format targetFormat) {
 /// [targetFormat] the target format for version bytes
 ///
 /// Returns the parent fingerprint as hex string
-String getParentFingerprint(String xpub, Slip132Format targetFormat) {
+String getParentFingerprint(String xpub, Slip132 targetFormat) {
   try {
-    final convertedXpub = changeVersionBytes(xpub, targetFormat);
+    final convertedXpub =
+        changeVersionBytes(xpub, targetFormat.network.version.public);
 
-    final networkType = NetworkType(
-      wif: targetFormat.wif,
-      bip32: targetFormat.bip32,
+    final networkType = Bip32Network(
+      wif: targetFormat.network.wif,
+      version: targetFormat.network.version,
     );
+
     final bip32Key = Bip32Keys.fromBase58(convertedXpub, network: networkType);
     return bip32Key.parentFingerprint.toRadixString(16);
   } catch (err) {
@@ -120,14 +123,16 @@ String getParentFingerprint(String xpub, Slip132Format targetFormat) {
 /// [targetFormat] the target format for version bytes
 ///
 /// Returns the depth as integer
-int getDepth(String xpub, Slip132Format targetFormat) {
+int getDepth(String xpub, Slip132 targetFormat) {
   try {
-    final convertedXpub = changeVersionBytes(xpub, targetFormat);
+    final convertedXpub =
+        changeVersionBytes(xpub, targetFormat.network.version.public);
 
-    final networkType = NetworkType(
-      wif: targetFormat.wif,
-      bip32: targetFormat.bip32,
+    final networkType = Bip32Network(
+      wif: targetFormat.network.wif,
+      version: targetFormat.network.version,
     );
+
     final bip32Key = Bip32Keys.fromBase58(convertedXpub, network: networkType);
     return bip32Key.depth;
   } catch (err) {
