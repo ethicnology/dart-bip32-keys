@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:bs58check/bs58check.dart' as bs58check;
 import 'package:hex/hex.dart';
 import 'bip32_keys_base.dart';
-import 'enums.dart';
+import 'slip132_enum.dart';
 import 'constants.dart';
 
 /// SLIP-132 extensions for Bip32Keys

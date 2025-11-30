@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:bip32_keys/src/constants.dart';
-import 'package:bip32_keys/src/enums.dart';
+import 'package:bip32_keys/src/slip132_enum.dart';
 
 import 'utils/crypto.dart';
 import 'utils/ecurve.dart' as ecc;
