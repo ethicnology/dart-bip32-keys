@@ -26,6 +26,51 @@ See `example/bip32_keys_example.dart` for a complete usage example.
 
 ## Usage
 
+### Convenience API (Recommended for most use cases)
+
+The easiest way to work with BIP32/BIP44/BIP49/BIP84 wallets:
+
+```dart
+import 'dart:typed_data';
+import 'package:bip32_keys/bip32_keys.dart';
+import 'package:bip39_mnemonic/bip39_mnemonic.dart' as bip39;
+
+void main() {
+  final mnemonic = bip39.Mnemonic.fromSentence(
+    "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong",
+    bip39.Language.english,
+  );
+
+  final masterNode = Bip32MasterNode.fromSeed(
+    Uint8List.fromList(mnemonic.seed)
+  );
+
+  // BIP44 - Legacy addresses (P2PKH)
+  final bip44 = masterNode.toBip44Legacy();
+  print('BIP44 xprv: ${bip44.extendedPrivateKey}');
+  print('BIP44 xpub: ${bip44.extendedPublicKey}');
+
+  // BIP49 - Nested SegWit addresses (P2SH-P2WPKH)
+  final bip49 = masterNode.toBip49NestedSegwit();
+  print('BIP49 yprv: ${bip49.extendedPrivateKey}');
+  print('BIP49 ypub: ${bip49.extendedPublicKey}');
+
+  // BIP84 - Native SegWit addresses (P2WPKH)
+  final bip84 = masterNode.toBip84SegwitWallet();
+  print('BIP84 zprv: ${bip84.extendedPrivateKey}');
+  print('BIP84 zpub: ${bip84.extendedPublicKey}');
+
+  // Import from extended key
+  const xpub = 'xpub6CfuVE8s2cAQijg7nqYKFoEu7AqkAfMNNMufV7utCmDjMjQZwM9RtN9PHxvBK4gkLWRyu8Xs6jh4TwRz8EYiFjWb8bxDMynAwyHZFxwzvkZ';
+  final wallet = Bip32Accounts.from(xpub, Slip132.mainnetBip44SingleSig);
+  print('Imported xpub: ${wallet.extendedPublicKey}');
+}
+```
+
+### Low-Level API (For advanced use cases)
+
+Direct access to BIP32 operations with full control:
+
 ```dart
 import 'package:bip32_keys/bip32_keys.dart';
 
@@ -33,9 +78,6 @@ void main() {
   const xprv =
       'xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi';
   final masterKey = Bip32Keys.fromBase58(xprv);
-
-  print('Master key (xpub): ${masterKey.toBase58()}');
-  print('Master key (WIF): ${masterKey.toWIF()}');
 
   // Derive a child key
   final childKey = masterKey.derive(0);
@@ -53,30 +95,11 @@ void main() {
   final neuteredKey = masterKey.neutered;
   print('Neutered key: ${neuteredKey.toBase58()}');
 
-  // SLIP-132 integration examples
-  print('\n=== SLIP-132 Examples ===');
-
   // Convert to different SLIP-132 formats
-  print('zpub format: ${neuteredKey.toSlip132(Slip132Format.zpub)}');
-  print('ypub format: ${neuteredKey.toSlip132(Slip132Format.ypub)}');
-
-  // Get fingerprints in different formats
-  print(
-      'Fingerprint (xpub): ${neuteredKey.getSlip132Fingerprint(Slip132Format.xpub)}');
-  print(
-      'Fingerprint (zpub): ${neuteredKey.getSlip132Fingerprint(Slip132Format.zpub)}');
-  print(
-      'Parent fingerprint: ${neuteredKey.getSlip132ParentFingerprint(Slip132Format.xpub)}');
-
-  // Create from existing xpub
-  final existingXpub =
-      "xpub6DJwRncrB8eNrzUq8XxgjwCZsEeWP8FeqBJbJQZ8JfuDwLdAzyjhHiHJieNuar1wjQTyihhMWtaKGE4DUd8uBgtyrNJqF5drwbNVUqb83b7";
-  final importedKey = Bip32Keys.fromBase58(existingXpub);
-
-  print('\n=== Imported Key Examples ===');
-  print('Original xpub: $existingXpub');
-  print('Converted to zpub: ${importedKey.toSlip132(Slip132Format.zpub)}');
-  print(
-      'Fingerprint: ${importedKey.getSlip132Fingerprint(Slip132Format.xpub)}');
+  final bip49Key = masterKey.derivePath("m/49'/0'/0'");
+  final ypub = bip49Key.neutered.toBase58(
+    overrideNetwork: Slip132.mainnetBip49SingleSig.network
+  );
+  print('ypub format: $ypub');
 }
 ```

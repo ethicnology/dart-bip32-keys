@@ -9,6 +9,11 @@ class TestValues {
     Language.english,
   );
 
+  final zooMnemonic = Mnemonic.fromSentence(
+    "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong",
+    Language.english,
+  );
+
   static get derivedBip44Xprv =>
       'xprv9xpXFhFpqdQK3TmytPBqXtGSwS3DLjojFhTGht8gwAAii8py5X6pxeBnQ6ehJiyJ6nDjWGJfZ95WxByFXVkDxHXrqu53WCRGypk2ttuqncb';
   static get derivedBip44Xpub =>
@@ -97,89 +102,121 @@ void main() {
       });
     });
 
-    test('xpub fingerprint', () {
-      final result =
-          getFingerprint(TestValues.xpub, Slip132.mainnetBip44SingleSig);
-      expect(result, TestValues.xpubFingerprint);
-    });
-
-    test('ypub to xpub conversion', () {
-      final result = changeVersionBytes(TestValues.ypub,
-          Slip132.mainnetBip44SingleSig.network.version.public);
-      expect(result, TestValues.ypubToXpub);
-    });
-
-    test('ypub fingerprint', () {
-      final result =
-          getFingerprint(TestValues.ypub, Slip132.mainnetBip49SingleSig);
-      expect(result, TestValues.ypubFingerprint);
-    });
-
-    test('zpub to xpub conversion', () {
-      final result = changeVersionBytes(TestValues.zpub,
-          Slip132.mainnetBip44SingleSig.network.version.public);
-      expect(result, TestValues.zpubToXpub);
-    });
-
-    test('zpub fingerprint', () {
-      final result =
-          getFingerprint(TestValues.zpub, Slip132.mainnetBip84SingleSig);
-      expect(result, TestValues.zpubFingerprint);
-    });
-
-    test('xpub to ypub conversion', () {
-      final result = changeVersionBytes(TestValues.xpub,
-          Slip132.mainnetBip49SingleSig.network.version.public);
-      expect(result, TestValues.xpubToYpub);
-    });
-
-    test('xpub to zpub conversion', () {
-      final result = changeVersionBytes(TestValues.xpub,
-          Slip132.mainnetBip84SingleSig.network.version.public);
-      expect(result, TestValues.xpubToZpub);
-    });
-
-    test('xpub to tpub conversion', () {
-      final result = changeVersionBytes(TestValues.xpub,
-          Slip132.testnetBip44SingleSig.network.version.public);
-      expect(result, TestValues.xpubToTpub);
-    });
-
-    test('xpub to upub conversion', () {
-      final result = changeVersionBytes(TestValues.xpub,
-          Slip132.testnetBip49SingleSig.network.version.public);
-      expect(result, TestValues.xpubToUpub);
-    });
-
-    test('xpub to vpub conversion', () {
-      final result = changeVersionBytes(TestValues.xpub,
-          Slip132.testnetBip84SingleSig.network.version.public);
-      expect(result, TestValues.xpubToVpub);
-    });
-
-    test('derive keys from seed', () {
+    test('Another Bip32Accounts convenience API', () {
       final seed = Uint8List.fromList(TestValues().mnemonic.seed);
-      final root = Bip32Keys.fromSeed(seed);
+      final masterNode = Bip32MasterNode.fromSeed(seed);
 
-      // m/44'/0'/0'
-      final bip44Ctx = root.derivePath("m/44'/0'/0'");
-      expect(bip44Ctx.toBase58(), TestValues.derivedBip44Xprv);
-      expect(bip44Ctx.neutered.toVersion(Slip132.mainnetBip44SingleSig),
-          TestValues.derivedBip44Xpub);
+      final bip44Wallet = masterNode.toBip44Legacy();
+      expect(bip44Wallet.extendedPrivateKey, TestValues.derivedBip44Xprv);
+      expect(bip44Wallet.extendedPublicKey, TestValues.derivedBip44Xpub);
 
-      // m/49'/0'/0'
-      final bip49Ctx = root.derivePath("m/49'/0'/0'");
-      expect(bip49Ctx.toVersion(Slip132.mainnetBip49SingleSig),
-          TestValues.derivedBip49Yprv);
-      expect(bip49Ctx.neutered.toVersion(Slip132.mainnetBip49SingleSig),
-          TestValues.derivedBip49Ypub);
+      final bip49Wallet = masterNode.toBip49NestedSegwit();
+      expect(bip49Wallet.extendedPrivateKey, TestValues.derivedBip49Yprv);
+      expect(bip49Wallet.extendedPublicKey, TestValues.derivedBip49Ypub);
 
-      // m/84'/0'/0'
-      final bip84Ctx = root.derivePath("m/84'/0'/0'");
-      expect(bip84Ctx.toVersion(Slip132.mainnetBip84SingleSig),
-          TestValues.derivedBip84Zprv);
-      expect(bip84Ctx.neutered.toVersion(Slip132.mainnetBip84SingleSig),
-          TestValues.derivedBip84Zpub);
+      final bip84Wallet = masterNode.toBip84SegwitWallet();
+      expect(bip84Wallet.extendedPrivateKey, TestValues.derivedBip84Zprv);
+      expect(bip84Wallet.extendedPublicKey, TestValues.derivedBip84Zpub);
+    });
+
+    test('convenience API with Zoo Mnemonic account 0', () {
+      final seed = Uint8List.fromList(TestValues().zooMnemonic.seed);
+      final masterNode = Bip32MasterNode.fromSeed(seed);
+
+      final bip44Wallet = masterNode.toBip44Legacy(account: 0);
+      expect(bip44Wallet.extendedPrivateKey,
+          'xprv9ygZ5ibyCEc7WFbegp1JtfJAZ91FmCdX18z4gjWGeRgkUw5RPoqBLZpuShTUg5wd4DE6k11zFejPZdPWVZGSMGyo9tRyqURMqoSMGisXSFJ');
+      expect(bip44Wallet.extendedPublicKey,
+          'xpub6CfuVE8s2cAQijg7nqYKFoEu7AqkAfMNNMufV7utCmDjMjQZwM9RtN9PHxvBK4gkLWRyu8Xs6jh4TwRz8EYiFjWb8bxDMynAwyHZFxwzvkZ');
+
+      final bip49Wallet = masterNode.toBip49NestedSegwit(account: 0);
+      expect(bip49Wallet.extendedPrivateKey,
+          'yprvAJdZBnj1tzxcQacxQ3GVVsSPCTe7yvppZr6DEUQjUv2gqJn1usqgrJtRJjX5d4vRZNURNFmMGaT6NGRrbFgWsGTgtDfMAouF3V4sYGQGj6B');
+      expect(bip49Wallet.extendedPublicKey,
+          'ypub6XcubJFujNWud4hRW4oVs1P7kVUcPPYfw51p2rpM3FZfi77ATR9wQ7Cu9yxtFsKHFNTvLbd2MxS4CLtC1YXvCqzbYnfDceSGDqUM33t2bAn');
+
+      final bip84Wallet = masterNode.toBip84SegwitWallet(account: 0);
+      expect(bip84Wallet.extendedPrivateKey,
+          'zprvAdDikkudZ5f4EJkJWyCE1DWJptekiNMWcE2LJXZ7L9LCftRQo6sjQ4JTdFpWE7qMyMiby5qwrXRPP9v59Lf2VX7V8CvBiD48LsZM85Cd4Cf');
+      expect(bip84Wallet.extendedPublicKey,
+          'zpub6rD5AGSXPTDMSnpmczjENMT3NvVF7q5MySww6uxitUsBYgkZLeBywrcwUWhW5YkeY2aS7xc45APPgfA6s6wWfG2gnfABq6TDz9zqeMu2JCY');
+    });
+
+    test('convenience API with Zoo Mnemonic account 1', () {
+      final seed = Uint8List.fromList(TestValues().zooMnemonic.seed);
+      final masterNode = Bip32MasterNode.fromSeed(seed);
+
+      final bip44Wallet = masterNode.toBip44Legacy(account: 1);
+      expect(bip44Wallet.extendedPrivateKey,
+          'xprv9ygZ5ibyCEc7b1jnq9sFayWvNWxxG1oR85qWfAnaRdqSrxSuq697goobSwgc4DuGfVU1t6X941uyaSFXS59rAyKFNPYM9i5rFhUFJZJDDWp');
+      expect(bip44Wallet.extendedPublicKey,
+          'xpub6CfuVE8s2cAQoVpFwBQFx7TevYoSfUXGVJm7TZCByyNRjkn4NdTNEc85JFZdqy8bqQSPsXtgDbqwyFemyP7UywpnfprxabuE22uQgBzdi9r');
+
+      final bip49Wallet = masterNode.toBip49NestedSegwit(account: 1);
+      expect(bip49Wallet.extendedPrivateKey,
+          'yprvAJdZBnj1tzxcSyEyPzemuM5CcBXEyybZx4piXd21rSJbWdQzbyexDg26hmgYaBRi1HNzpuJFY4ZNNQieUqxo73q81RtUG6uvE58D2ZxrTER');
+      expect(bip49Wallet.extendedPublicKey,
+          'ypub6XcubJFujNWufTKSW2BnGV1wADMjPSKRKHkKL1RdQmqaPRk99WyCmULaZ3cbxo7Y6fQTji5CpEPuW7TT3K6UFyTyC1GURVnfuvEGvNsn2Vd');
+
+      final bip84Wallet = masterNode.toBip84SegwitWallet(account: 1);
+      expect(bip84Wallet.extendedPrivateKey,
+          'zprvAdDikkudZ5f4G6NAwYjDUNoLMKdTDPY6cfpj6psA9iGgbwxv5seGjmdEgG9E3Mgtx6jtX8QStZRqyKhPsW5qvsFQjb9HXbvyCFiSzM1Ffut');
+      expect(bip84Wallet.extendedPublicKey,
+          'zpub6rD5AGSXPTDMUaSe3aGDqWk4uMTwcrFwytkKuDGmi3ofUkJ4dQxXHZwiXWbHHrELJAor8xGs61F8sbKS2JdQkLZRnu5PGktmr6F32nEBUBb');
+    });
+
+    test('convenience API from Zoo Mnemonic XPRV', () {
+      const bip44Xprv =
+          'xprv9ygZ5ibyCEc7WFbegp1JtfJAZ91FmCdX18z4gjWGeRgkUw5RPoqBLZpuShTUg5wd4DE6k11zFejPZdPWVZGSMGyo9tRyqURMqoSMGisXSFJ';
+      const bip44Xpub =
+          'xpub6CfuVE8s2cAQijg7nqYKFoEu7AqkAfMNNMufV7utCmDjMjQZwM9RtN9PHxvBK4gkLWRyu8Xs6jh4TwRz8EYiFjWb8bxDMynAwyHZFxwzvkZ';
+      final bip44Wallet =
+          Bip32Accounts.from(bip44Xprv, Slip132.mainnetBip44SingleSig);
+
+      expect(bip44Wallet.extendedPrivateKey, bip44Xprv);
+      expect(bip44Wallet.extendedPublicKey, bip44Xpub);
+
+      const bip49Yprv =
+          'yprvAJdZBnj1tzxcQacxQ3GVVsSPCTe7yvppZr6DEUQjUv2gqJn1usqgrJtRJjX5d4vRZNURNFmMGaT6NGRrbFgWsGTgtDfMAouF3V4sYGQGj6B';
+      const bip49Ypub =
+          'ypub6XcubJFujNWud4hRW4oVs1P7kVUcPPYfw51p2rpM3FZfi77ATR9wQ7Cu9yxtFsKHFNTvLbd2MxS4CLtC1YXvCqzbYnfDceSGDqUM33t2bAn';
+      final bip49Wallet =
+          Bip32Accounts.from(bip49Yprv, Slip132.mainnetBip49SingleSig);
+      expect(bip49Wallet.extendedPrivateKey, bip49Yprv);
+      expect(bip49Wallet.extendedPublicKey, bip49Ypub);
+
+      const bip84Zprv =
+          'zprvAdDikkudZ5f4EJkJWyCE1DWJptekiNMWcE2LJXZ7L9LCftRQo6sjQ4JTdFpWE7qMyMiby5qwrXRPP9v59Lf2VX7V8CvBiD48LsZM85Cd4Cf';
+      const bip84Zpub =
+          'zpub6rD5AGSXPTDMSnpmczjENMT3NvVF7q5MySww6uxitUsBYgkZLeBywrcwUWhW5YkeY2aS7xc45APPgfA6s6wWfG2gnfABq6TDz9zqeMu2JCY';
+      final bip84Wallet =
+          Bip32Accounts.from(bip84Zprv, Slip132.mainnetBip84SingleSig);
+      expect(bip84Wallet.extendedPrivateKey, bip84Zprv);
+      expect(bip84Wallet.extendedPublicKey, bip84Zpub);
+    });
+
+    test('convenience API from Zoo Mnemonic XPUB', () {
+      const bip44Xpub =
+          'xpub6CfuVE8s2cAQijg7nqYKFoEu7AqkAfMNNMufV7utCmDjMjQZwM9RtN9PHxvBK4gkLWRyu8Xs6jh4TwRz8EYiFjWb8bxDMynAwyHZFxwzvkZ';
+      final bip44Wallet =
+          Bip32Accounts.from(bip44Xpub, Slip132.mainnetBip44SingleSig);
+
+      expect(bip44Wallet.extendedPrivateKey, null);
+      expect(bip44Wallet.extendedPublicKey, bip44Xpub);
+
+      const bip49Ypub =
+          'ypub6XcubJFujNWud4hRW4oVs1P7kVUcPPYfw51p2rpM3FZfi77ATR9wQ7Cu9yxtFsKHFNTvLbd2MxS4CLtC1YXvCqzbYnfDceSGDqUM33t2bAn';
+      final bip49Wallet =
+          Bip32Accounts.from(bip49Ypub, Slip132.mainnetBip49SingleSig);
+      expect(bip49Wallet.extendedPrivateKey, null);
+      expect(bip49Wallet.extendedPublicKey, bip49Ypub);
+
+      const bip84Zpub =
+          'zpub6rD5AGSXPTDMSnpmczjENMT3NvVF7q5MySww6uxitUsBYgkZLeBywrcwUWhW5YkeY2aS7xc45APPgfA6s6wWfG2gnfABq6TDz9zqeMu2JCY';
+      final bip84Wallet =
+          Bip32Accounts.from(bip84Zpub, Slip132.mainnetBip84SingleSig);
+      expect(bip84Wallet.extendedPrivateKey, null);
+      expect(bip84Wallet.extendedPublicKey, bip84Zpub);
     });
   });
 }

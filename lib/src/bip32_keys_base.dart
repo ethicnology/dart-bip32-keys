@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:bip32_keys/src/constants.dart';
-import 'package:bip32_keys/src/slip132_enum.dart';
+import 'package:bip32_keys/src/slip132.dart';
 
 import 'utils/crypto.dart';
 import 'utils/ecurve.dart' as ecc;
@@ -243,7 +243,9 @@ class Bip32Keys {
   }
 
   /// Serializes the key to Base58
-  String toBase58() {
+  String toBase58({Bip32Network? overrideNetwork}) {
+    final network = overrideNetwork ?? this.network;
+
     final version = switch (isNeutered) {
       true => network.version.public,
       false => network.version.private,
