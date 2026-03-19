@@ -4,8 +4,8 @@ import 'package:test/test.dart';
 import 'package:bip32_keys/bip32_keys.dart';
 import 'package:bip32_keys/src/utils/ecurve.dart' as ecc;
 
-final defichainTestnet = NetworkType(
-    bip32: Bip32Type(private: 0x04358394, public: 0x043587cf), wif: 0xef);
+final defichainTestnet = Bip32Network(
+    version: Bip32Version(private: 0x04358394, public: 0x043587cf), wif: 0xef);
 
 void main() {
   group("curve test", () {
