@@ -1,3 +1,8 @@
+## 3.1.4
+
+- **CHORE**: Relax `pointycastle` constraint to `>=3.0.0 <5.0.0` so apps can resolve a single pointycastle version alongside packages that require 4.x. Only stable APIs are used; the public API is unchanged from 3.1.1. Thanks to [@1-leo](https://github.com/1-leo) for the original change ([#1](https://github.com/ethicnology/dart-bip32-keys/pull/1)).
+- **NOTE**: Supersedes 3.1.2 and 3.1.3, which were published in error — they accidentally included unreleased breaking API renames (`NetworkType`/`Bip32Type` → `Bip32Network`) and should not be used. Those two versions have been retracted.
+
 ## 3.1.1
 
 - **FEAT**: Add `Slip132Format.parse()` and `Slip132Format.tryParse()` methods for detecting SLIP-132 formats from extended keys
